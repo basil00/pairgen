@@ -36,6 +36,8 @@
 #include "secp256k1.c"
 #include "hash160.c"
 
+static secp256k1_context_t *cxt;
+
 /****************************************************************************/
 // LINUX CRUFT:
 
@@ -438,7 +440,7 @@ static void make_sig(char *str, size_t slen, const char *message0,
     uint256_t msg = sha256d(message, mlen + mlen0 + 2);
     uint8_t sig[65];
     int rec = -1;
-    int res = secp256k1_ecdsa_sign_compact(msg.i8, sig+1, key.i8, 
+    int res = secp256k1_ecdsa_sign_compact(cxt, msg.i8, sig+1, key.i8, 
         secp256k1_nonce_function_rfc6979, NULL, &rec);
     if (res == 0 || rec == -1)
     {
@@ -509,7 +511,7 @@ static void *init_worker(void *arg)
         }
         while (overflow);
         secp256k1_gej_t tmp;
-        secp256k1_ecmult_gen(&tmp, &priv_offsets[j][i]);
+        secp256k1_ecmult_gen(&cxt->ecmult_gen_ctx, &tmp, &priv_offsets[j][i]);
         secp256k1_ge_set_gej(&offsets[j][i], &tmp);
     }
     free(seed);
@@ -563,7 +565,7 @@ static void init(ssize_t n, const char *priv_name, const char *pub_name)
             secp256k1_scalar_set_b32(&priv_bases[i], x.i8, &overflow);
         }
         while (overflow);
-        secp256k1_ecmult_gen(&bases[i], &priv_bases[i]);
+        secp256k1_ecmult_gen(&cxt->ecmult_gen_ctx, &bases[i], &priv_bases[i]);
     }
     free(seed);
     putchar('.');
@@ -1298,7 +1300,8 @@ int main(int argc, char **argv)
     memset(offsets, 0, sizeof(offsets));
     memset(priv_bases, 0x80, sizeof(priv_bases));
     memset(priv_offsets, 0x80, sizeof(priv_offsets));
-    secp256k1_start(SECP256K1_START_SIGN | SECP256K1_START_VERIFY);
+    cxt = secp256k1_context_create(
+        SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
     mutex_init(&table_lock);
 
     size_t NUM_WORKERS = num_threads();
