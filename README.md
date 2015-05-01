@@ -66,6 +66,18 @@ Hacking
   generate work on multiple machines, and combine the work by concatenating
   the resulting *job.work* files.
 
+Building
+--------
+
+For Linux make sure that gmp-dev is installed, then run make:
+
+    $ make
+
+For Windows use MinGW cross-compilation.  First Download and build gmp-6.0.0
+from source, then run:
+
+    $ make -f Makefile.windows
+
 BUGS
 ----
 

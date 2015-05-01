@@ -1,0 +1,14 @@
+
+CC = x86_64-w64-mingw32-gcc -std=gnu99 -DWINDOWS -mthreads
+STRIP = x86_64-w64-mingw32-strip
+CFLAGS = -Isecp256k1/ -Isecp256k1/src/ -O3 --save-temps -fomit-frame-pointer \
+    -ffast-math -Igmp-6.0.0/
+OBJS = pairgen.o 
+
+pairgen.exe: $(OBJS)
+	$(CC) -o pairgen.exe $(OBJS) gmp-6.0.0/.libs/libgmp.a -lm 
+	$(STRIP) pairgen.exe
+
+clean:
+	rm -f $(OBJS) pairgen.exe
+
