@@ -43,10 +43,13 @@ static void secp256k1_ge_neg(secp256k1_ge_t *r, const secp256k1_ge_t *a) {
     secp256k1_fe_negate(&r->y, &r->y, 1);
 }
 
+// PAIRGEN:
+// Change secp256k1_ge_set_gej ->  secp256k1_ge_set_gej_var for speed.
+
 static void secp256k1_ge_set_gej(secp256k1_ge_t *r, secp256k1_gej_t *a) {
     secp256k1_fe_t z2, z3;
     r->infinity = a->infinity;
-    secp256k1_fe_inv(&a->z, &a->z);
+    secp256k1_fe_inv_var(&a->z, &a->z);
     secp256k1_fe_sqr(&z2, &a->z);
     secp256k1_fe_mul(&z3, &a->z, &z2);
     secp256k1_fe_mul(&a->x, &a->x, &z2);
