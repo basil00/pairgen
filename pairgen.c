@@ -1508,6 +1508,7 @@ int main(int argc, char **argv)
         putchar(addr1[i]);
     set_bold(false);
     printf("%s\n\n", addr1+share);
+    printf("warning: verify the keys/addresses before use!\n\n");
 
     return 0;
 }
