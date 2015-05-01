@@ -288,17 +288,22 @@ static int secp256k1_fe_cmp_var(const secp256k1_fe_t *a, const secp256k1_fe_t *b
     return 0;
 }
 
+// PAIRGEN:
+// The fe_set_b32 and fe_get_b32 functions are a bottleneck for pairgen.
+// Replace the default implementation with a faster (&simpler) implementation:
+
+#define BE64(x)     __builtin_bswap64((x))
+
 static int secp256k1_fe_set_b32(secp256k1_fe_t *r, const unsigned char *a) {
-    int i;
-    r->n[0] = r->n[1] = r->n[2] = r->n[3] = r->n[4] = 0;
-    for (i=0; i<32; i++) {
-        int j;
-        for (j=0; j<2; j++) {
-            int limb = (8*i+4*j)/52;
-            int shift = (8*i+4*j)%52;
-            r->n[limb] |= (uint64_t)((a[31-i] >> (4*j)) & 0xF) << shift;
-        }
-    }
+    uint64_t *a64 = (uint64_t *)a;
+    uint64_t a0 = BE64(a64[0]), a1 = BE64(a64[1]), a2 = BE64(a64[2]),
+        a3 = BE64(a64[3]);
+
+    r->n[0] = a3 & 0x000FFFFFFFFFFFFFULL;
+    r->n[1] = (a3 >> 52) | ((a2 << 12) & 0x000FFFFFFFFFFFFFULL);
+    r->n[2] = (a2 >> 40) | ((a1 << 24) & 0x000FFFFFFFFFFFFFULL);
+    r->n[3] = (a1 >> 28) | ((a0 << 36) & 0x000FFFFFFFFFFFFFULL);
+    r->n[4] = (a0 >> 16);
     if (r->n[4] == 0x0FFFFFFFFFFFFULL && (r->n[3] & r->n[2] & r->n[1]) == 0xFFFFFFFFFFFFFULL && r->n[0] >= 0xFFFFEFFFFFC2FULL) {
         return 0;
     }
@@ -317,16 +322,14 @@ static void secp256k1_fe_get_b32(unsigned char *r, const secp256k1_fe_t *a) {
     VERIFY_CHECK(a->normalized);
     secp256k1_fe_verify(a);
 #endif
-    for (i=0; i<32; i++) {
-        int j;
-        int c = 0;
-        for (j=0; j<2; j++) {
-            int limb = (8*i+4*j)/52;
-            int shift = (8*i+4*j)%52;
-            c |= ((a->n[limb] >> shift) & 0xF) << (4 * j);
-        }
-        r[31-i] = c;
-    }
+    uint64_t *r64 = (uint64_t *)r;
+    uint64_t n4 = a->n[4], n3 = a->n[3], n2 = a->n[2], n1 = a->n[1],
+        n0 = a->n[0];
+    
+    r64[0] = BE64((n4 << 16) | (n3 >> 36));
+    r64[1] = BE64((n3 << 28) | (n2 >> 24));
+    r64[2] = BE64((n2 << 40) | (n1 >> 12));
+    r64[3] = BE64((n1 << 52) | n0);
 }
 
 SECP256K1_INLINE static void secp256k1_fe_negate(secp256k1_fe_t *r, const secp256k1_fe_t *a, int m) {
